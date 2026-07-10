@@ -1,0 +1,17 @@
+# Virtual Environments
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+
+# Jupyter
+.ipynb_checkpoints/
