@@ -1,48 +1,104 @@
-import sys
-import warnings
-
-# Suppress the deprecation warning since we're intentionally targeting a Python 3.14 bug
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="asyncio")
-
-if sys.platform == 'win32':
-    import asyncio
-    try:
-        # Falls back cleanly if policies are completely removed in a later version
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    except AttributeError:
-        pass
-
+from pathlib import Path
 import streamlit as st
 import numpy as np
 import joblib
 
-# Load the model
-model = joblib.load("student_model.pkl")
+# -----------------------------
+# Page Configuration
+# -----------------------------
+st.set_page_config(
+    page_title="Student Performance Prediction",
+    page_icon="🎓",
+    layout="centered"
+)
 
-# UI Title
-st.title("Student Performance Prediction")
+# -----------------------------
+# Load Model
+# -----------------------------
+MODEL_PATH = Path(__file__).parent / "model" / "student_model.pkl"
 
-# Collect the 5 EXACT features expected by the model
-studytime = st.number_input("Study Time (e.g., hours per week)", min_value=0.0, step=1.0)
-failures = st.number_input("Past Class Failures", min_value=0, max_value=4, step=1)
-absences = st.number_input("Number of Absences", min_value=0, step=1)
-g1_grade = st.number_input("G1 Grade (First Period Marks)", min_value=0.0, step=1.0)
-g2_grade = st.number_input("G2 Grade (Second Period Marks)", min_value=0.0, step=1.0)
+@st.cache_resource
+def load_model():
+    return joblib.load(MODEL_PATH)
 
-if st.button("Predict"):
-    # Package inputs into a 2D array matching the exact training feature order
-    data = np.array([
-        [
-            studytime,   # Feature 0
-            failures,    # Feature 1
-            absences,    # Feature 2
-            g1_grade,    # Feature 3
-            g2_grade     # Feature 4
-        ]
-    ])
+model = load_model()
 
-    # Predict using the 5 features
-    result = model.predict(data)
+# -----------------------------
+# Title
+# -----------------------------
+st.title("🎓 Student Performance Prediction")
+st.markdown(
+    "Predict a student's **final grade (G3)** using study habits and previous academic performance."
+)
 
-    # Output the final prediction (usually G3 score)
-    st.success(f"Predicted Final Marks (G3): {result[0]:.2f}")
+st.divider()
+
+# -----------------------------
+# User Input
+# -----------------------------
+studytime = st.number_input(
+    "📚 Study Time (Hours per Week)",
+    min_value=0.0,
+    max_value=30.0,
+    value=5.0,
+    step=1.0,
+)
+
+failures = st.number_input(
+    "❌ Previous Class Failures",
+    min_value=0,
+    max_value=4,
+    value=0,
+)
+
+absences = st.number_input(
+    "📅 Number of Absences",
+    min_value=0,
+    max_value=100,
+    value=0,
+)
+
+g1 = st.number_input(
+    "📝 G1 Grade (First Period)",
+    min_value=0.0,
+    max_value=20.0,
+    value=10.0,
+)
+
+g2 = st.number_input(
+    "📝 G2 Grade (Second Period)",
+    min_value=0.0,
+    max_value=20.0,
+    value=10.0,
+)
+
+st.divider()
+
+# -----------------------------
+# Prediction
+# -----------------------------
+if st.button("🚀 Predict Final Grade", use_container_width=True):
+
+    features = np.array(
+        [[studytime, failures, absences, g1, g2]]
+    )
+
+    prediction = model.predict(features)[0]
+
+    st.success(f"🎯 Predicted Final Grade (G3): **{prediction:.2f} / 20**")
+
+    if prediction >= 16:
+        st.balloons()
+        st.success("🌟 Excellent Performance!")
+
+    elif prediction >= 10:
+        st.info("👍 Good Performance. Keep it up!")
+
+    else:
+        st.warning("📚 Needs Improvement. Focus on study time and attendance.")
+
+# -----------------------------
+# Footer
+# -----------------------------
+st.markdown("---")
+st.caption("Developed using Streamlit and Scikit-learn")
